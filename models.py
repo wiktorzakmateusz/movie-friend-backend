@@ -62,3 +62,9 @@ class Movie(MovieBase, table=True):
 # The schema for validating input (used in your POST request)
 class MovieCreate(MovieBase):
     pass
+
+class UserRating(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    movie_id: int = Field(index=True)
+    rating: int
+    user_id: int = Field(foreign_key="user.id")
