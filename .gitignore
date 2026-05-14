@@ -1,4 +1,14 @@
 __pycache__/
 .venv/
+.venv_3_13
 .env
 .DS_Store
+ml/models
+ml_playground
+maintenance
+arch
+*.so
+requirements_3_13.txt
+requirements_tests.txt
+build
+*.c

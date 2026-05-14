@@ -1,39 +1,43 @@
+# database scheme
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from pydantic import EmailStr
 from sqlalchemy import Column, Integer, String, Float, Text, Boolean
 
-# Base Model (Shared properties)
+# user base model
 class UserBase(SQLModel):
     nickname: str
     email: EmailStr
 
-# Input Schema (What the user sends during sign up)
+# user input schema
 class UserCreate(UserBase):
     password: str
 
-# Database Table (What is actually stored)
+# user database table
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    model_id: Optional[int] # internal id for ML models
     hashed_password: str
 
-# Output Schema (What is send back - NO password)
+# user output schema
 class UserRead(UserBase):
     id: int
 
-# Input: What Next.js sends to /token
+# login input
 class LoginRequest(SQLModel):
     email: str
     password: str
 
-# Output: What we send back to Next.js
+# login output
 class Token(SQLModel):
     access_token: str
     token_type: str
 
-# Base class shares fields between the Database Table and Input Schema
+# movie base class
 class MovieBase(SQLModel):
-    imdb_id: str = Field(alias="imdbID", unique=True, index=True)
+    id: int # internal id for ML models
+    imdb_id: str = Field(alias="imdbID", unique=True, index=True) # Imdb id
+    movie_id: str = Field(alias="movieID", unique=True, index=True) # MovieLens id
     title: str = Field(alias="Title", index=True)
     year: int = Field(alias="Year")
     type: str = Field(alias="Type")
@@ -49,22 +53,23 @@ class MovieBase(SQLModel):
     awards: Optional[str] = Field(default=None, alias="Awards")
     
     imdb_rating: Optional[float] = Field(default=None, alias="imdbRating")
-    imdb_votes: Optional[str] = Field(default=None, alias="imdbVotes")
+    imdb_votes: Optional[str] = Field(default=None, alias="imdbVotes") # to delete
     box_office: Optional[str] = Field(default=None, alias="BoxOffice")
 
     class Config:
         populate_by_name = True
 
-# The actual table in the database
+# movie database table
 class Movie(MovieBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(sa_column=Column(Integer, primary_key=True, autoincrement=False))
 
-# The schema for validating input (used in your POST request)
+# movie input
 class MovieCreate(MovieBase):
     pass
 
+# users' ratings database table
 class UserRating(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    movie_id: int = Field(index=True)
-    rating: int
-    user_id: int = Field(foreign_key="user.id")
+    movie_id: int = Field(index=True, foreign_key="movie.id") # internal id for ML models
+    rating: int 
+    user_id: int = Field(foreign_key="user.id") # user table id column
