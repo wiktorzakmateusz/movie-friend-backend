@@ -10,4 +10,4 @@ arch
 requirements_3_13.txt
 requirements_tests.txt
 build
-*.o
+*.c
