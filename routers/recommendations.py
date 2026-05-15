@@ -19,14 +19,13 @@ router = APIRouter(
     tags=["recommendations"]
 )
 
-# model initialisation and loading
-svd = SVD.load('../ml/models/SVD.npz')
-ease = EASE()
-ease.load_model('../ml/models/B_ease.npz')
-
-
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger(__name__)
+
+# model initialisation and loading
+svd = SVD.load('ml/models/SVD.npz')
+ease = EASE()
+ease.load_model('ml/models/B_ease.npz')
 
 @router.get("/")
 def get_recommendations(
