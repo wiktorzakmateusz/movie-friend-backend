@@ -3,7 +3,6 @@ __pycache__/
 .venv_3_13
 .env
 .DS_Store
-ml/models
 ml_playground
 maintenance
 arch
@@ -11,4 +10,4 @@ arch
 requirements_3_13.txt
 requirements_tests.txt
 build
-*.c
+*.o
