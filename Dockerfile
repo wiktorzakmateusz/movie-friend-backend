@@ -10,8 +10,7 @@ WORKDIR /app
 ARG GITHUB_TOKEN
 
 # clones the repository using Railway token
-RUN --mount=type=secret,id=GITHUB_TOKEN \
-    git clone https://oauth2:$(cat /run/secrets/GITHUB_TOKEN)@github.com/wiktorzakmateusz/movie-friend-backend.git .
+RUN git clone https://oauth2:${GITHUB_TOKEN}@github.com/wiktorzakmateusz/movie-friend-backend.git .
 
 # pulls LFS files
 RUN git lfs pull
