@@ -21,7 +21,7 @@ def login_for_access_token(
     statement = select(User).where(User.email == login_data.email)
     user = session.exec(statement).first()
 
-    # check sif the user was found and
+    # checks if the user was found and
     # if the provided password matches the hashed password in the DB
     if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
