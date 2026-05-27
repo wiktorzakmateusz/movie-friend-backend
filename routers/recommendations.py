@@ -60,8 +60,12 @@ def get_ratings(
     Predicts rating for an users & item pair
     """
 
+    # Cython strictly requires an integer. If the user is new (model_id is None),
+    # -1 is passed so the SVD model cleanly falls back to the global mean
+    safe_user_id = current_user.model_id if current_user.model_id is not None else -1
+
     # getting recommendation
-    rating = svd.estimate(current_user.model_id, current_item)
+    rating = svd.estimate(safe_user_id, current_item)
 
     # scaling to the 1-10 scale
     rating *= 2
