@@ -52,7 +52,7 @@ def test_full_user_journey(client, session):
     assert isinstance(rec_response.json(), list)
 
     # triggers SVD model to predict a specific rating for an unrated movie (Inception, id=2)
-    rating_pred_response = client.get("/recommendations/2/", headers=auth_headers)
+    rating_pred_response = client.get("/recommendations/2/rating", headers=auth_headers)
     assert rating_pred_response.status_code == 200
     pred_data = rating_pred_response.json()
     

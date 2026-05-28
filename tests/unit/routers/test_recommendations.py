@@ -77,3 +77,36 @@ def test_get_ratings_boundaries(mock_svd, auth_client):
     mock_svd.estimate.return_value = 0.2 
     response_low = auth_client.get("/recommendations/123/rating")
     assert response_low.json() == {"predicted_rating": 1.0}
+
+@patch("routers.recommendations.ease.predict_new_user")
+@patch("routers.recommendations.get_movies_from_internal_ids")
+def test_get_similar_movies_success(mock_get_movie_objects, mock_ease_predict, auth_client):
+    """
+    Tests successful retrieval of similar movies
+    """
+    target_movie_id = 99
+    
+    # simulates ease returning an array of internal ids for similar movies
+    mock_ease_predict.return_value = np.array([201, 202, 203])
+    
+    # simulates fetching movie objects from the db
+    mock_get_movie_objects.return_value = [
+        Movie(id=1, imdb_id="tt1", movie_id="201", title="Similar Movie 1", year=2020, type="movie", poster="img1.jpg"),
+        Movie(id=2, imdb_id="tt2", movie_id="202", title="Similar Movie 2", year=2021, type="movie", poster="img2.jpg"),
+        Movie(id=3, imdb_id="tt3", movie_id="203", title="Similar Movie 3", year=2022, type="movie", poster="img3.jpg")
+    ]
+    
+    response = auth_client.get(f"/recommendations/{target_movie_id}/similar_movies")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 3
+    assert data[0]["title"] == "Similar Movie 1"
+    
+    # verifies ease was called with the single item list and k=5
+    mock_ease_predict.assert_called_once_with([target_movie_id], k=5)
+    
+    # verifies the db fetch was called with the resulting list from ease
+    mock_get_movie_objects.assert_called_once()
+    args, _ = mock_get_movie_objects.call_args
+    assert args[1] == [201, 202, 203] 
