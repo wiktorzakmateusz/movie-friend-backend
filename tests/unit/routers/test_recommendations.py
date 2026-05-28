@@ -55,7 +55,7 @@ def test_get_ratings_standard(mock_svd, auth_client):
     # simulates svd returning a raw 1-5 rating
     mock_svd.estimate.return_value = 3.6
     
-    response = auth_client.get("/recommendations/99/")
+    response = auth_client.get("/recommendations/99/rating")
     
     assert response.status_code == 200
     assert response.json() == {"predicted_rating": 7.2}
@@ -70,10 +70,10 @@ def test_get_ratings_boundaries(mock_svd, auth_client):
     """
     # tests maximum boundary (should cap at 10)
     mock_svd.estimate.return_value = 6.0 
-    response_high = auth_client.get("/recommendations/123/")
+    response_high = auth_client.get("/recommendations/123/rating")
     assert response_high.json() == {"predicted_rating": 10.0}
     
     # tests minimum boundary (should floor at 1)
     mock_svd.estimate.return_value = 0.2 
-    response_low = auth_client.get("/recommendations/123/")
+    response_low = auth_client.get("/recommendations/123/rating")
     assert response_low.json() == {"predicted_rating": 1.0}

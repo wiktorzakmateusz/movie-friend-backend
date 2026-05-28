@@ -51,13 +51,13 @@ def get_recommendations(
 
     return [movie.model_dump() for movie in recommended_movies] # converting to standard py dict
 
-@router.get("/{current_item}/")
+@router.get("/{current_item}/rating")
 def get_ratings(
     current_item: int,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Predicts rating for an users & item pair
+    Predicts rating for an user & item pair
     """
 
     # Cython strictly requires an integer. If the user is new (model_id is None),
@@ -73,3 +73,23 @@ def get_ratings(
     rating = max(1, rating)
 
     return {"predicted_rating": round(rating, 1)}
+
+@router.get("/{current_item}/similar_movies")
+def get_similar_movies(
+    current_item: int,
+    session: Session = Depends(get_session)
+):
+    """
+    Predicts similar movies for an user & item pair
+    """
+    
+    # getting similar movies is equivalent to recommending movies to the user 
+    # with history of that specific movie
+
+    # getting similar movies - a ndarray of movies internal ids
+    similar_movies_ids = ease.predict_new_user([current_item], k=5)
+
+    # returns list of movie objects
+    similar_movies = get_movies_from_internal_ids(session, similar_movies_ids.tolist())
+
+    return [movie.model_dump() for movie in similar_movies] # converting to standard py dict
