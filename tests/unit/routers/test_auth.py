@@ -2,6 +2,9 @@ from unittest.mock import patch
 from models import User
 
 def test_login_success(client, session):
+    """
+    Tests a correct user login
+    """
 
     test_user = User(email='user@example.com', hashed_password='fake_db_hash', nickname='test_user_123')
     session.add(test_user)
@@ -23,6 +26,9 @@ def test_login_success(client, session):
     }
 
 def test_login_wrong_password(client, session):
+    """
+    Tests an user with incorrect password denial
+    """
 
     test_user = User(email='user@example.com', hashed_password='fake_db_hash', nickname='test_user_123')
     session.add(test_user)
@@ -39,6 +45,9 @@ def test_login_wrong_password(client, session):
     assert response.json() == {'detail': 'Incorrect email or password'}
 
 def test_login_unregistered_email(client, session):
+    """
+    Tests an unregistered user denial
+    """
 
     response = client.post(
         '/token',

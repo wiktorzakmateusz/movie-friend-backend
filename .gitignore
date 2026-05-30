@@ -11,3 +11,6 @@ requirements_3_13.txt
 requirements_tests.txt
 build
 *.c
+.vscode
+.coverage
+.pytest_cache

@@ -1,5 +1,5 @@
 # router for handling ratings
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlmodel import Session, select
 from database import get_session
 from models import UserRating, Movie, User
@@ -19,7 +19,7 @@ def get_user_ratings(
     """
 
     # query to join movies and ratings, filtered by the current user's id
-    statement = select(Movie, UserRating.rating)\
+    statement = select(Movie, UserRating.rating, UserRating.ignore)\
     .where(Movie.id == UserRating.movie_id)\
     .where(UserRating.user_id == current_user.id)
     
@@ -27,9 +27,10 @@ def get_user_ratings(
     
     # merge the movie model and the rating value into a single dictionary
     movies_with_ratings = []
-    for movie, rating_value in results:
+    for movie, rating_value, ignore_flag in results[::-1]:
         movie_dict = movie.model_dump()
         movie_dict["user_rating"] = rating_value 
+        movie_dict["ignore"] = ignore_flag
         movies_with_ratings.append(movie_dict)
         
     return movies_with_ratings
@@ -90,3 +91,38 @@ def delete_rating(
         return {"ok": True}
         
     raise HTTPException(status_code=404, detail="Rating not found")
+
+@router.patch("/{movie_id}/ignore")
+def ignore_movie_recommendation(
+    movie_id: int, 
+    ignore: bool = Body(embed=True),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Updates the ignore flag for a specific movie, 
+    preventing it from influencing future recommendations
+    or unpreventing.
+    """
+
+    # locates the existing interaction in the database
+    statement = select(UserRating).where(
+        UserRating.movie_id == movie_id,
+        UserRating.user_id == current_user.id
+    )
+    
+    interaction = session.exec(statement).first()
+    
+    # if the user hasn't interacted with the movie, they can't ignore its influence
+    if not interaction:
+        raise HTTPException(
+            status_code=404, 
+            detail="No watch history found for this movie. Cannot ignore."
+        )
+        
+    # sets the flag and saves to the database
+    interaction.ignore = ignore
+    session.add(interaction)
+    session.commit()
+    
+    return {"ok": True}
