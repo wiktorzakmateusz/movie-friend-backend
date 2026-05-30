@@ -20,13 +20,13 @@ class EASE:
         self.X_train = X_train_csr.astype(np.float32)
         self.num_items = X_train_csr.shape[1]
 
-        # Gram matrix G = X^T X
+        # gram matrix G = X^T X
         G = self.X_train.T @ self.X_train
         
-        # Added regularization to the diagonal
+        # added regularization to the diagonal
         G += self.reg_weight * sp.identity(G.shape[0], dtype=np.float32)
         
-        # Converting to dense and inverting
+        # converting to dense and inverting
         G_dense = G.todense()
         P = np.linalg.inv(G_dense)
         
@@ -51,12 +51,15 @@ class EASE:
         self.B = np.load(path)['B']
         self.num_items = self.B.shape[1]
 
-    def predict_new_user(self, interacted_item_ids, k=20, mask_interacted=True):
+    def predict_new_user(self, interacted_item_ids, interacted_item_ids_without_ignored, k=20, mask_interacted=True):
         """
         Predicts scores for a single new user and returns the Top-K recommendations
         
         Args:
-            interacted_item_ids: list or 1D array of integer item indices
+            interacted_item_ids: list or 1D array of integer item indices (to use for 
+            prediction)
+            interacted_item_ids_without_ignored: list or 1D array of integer item 
+            indices (to mask from recommendations)
             k: int, the number of top recommendations to return
             mask_interacted: bool, if True, skips already interacted items
             
@@ -70,7 +73,7 @@ class EASE:
             
         # user vector
         user_vector = np.zeros(self.num_items, dtype=np.float32)
-        user_vector[interacted_item_ids] = 1.0
+        user_vector[interacted_item_ids_without_ignored] = 1.0
         
         # scores calculation
         scores = user_vector @ self.B
@@ -87,3 +90,29 @@ class EASE:
         top_k_idx = unsorted_top_k_idx[np.argsort(-scores[unsorted_top_k_idx])]
         
         return top_k_idx
+
+    def explain_recommendation(self, interacted_item_ids, target_item, top_n=3):
+        """
+        Explains a recommendation by finding which seen items contributed most
+        
+        Args:
+            interacted_item_ids: list or 1D array of integer item indices
+            target_item: int, the recommended item id to be explained
+            top_n: int, how many predictors to return
+            
+        Returns:
+            top_predictor_items: the seen items that caused target_item recommendation
+            top_predictor_weights: their mathematical contributions
+        """
+        
+        # gets the exact weights from the seen items to the target item
+        contributions = np.asarray(self.B[interacted_item_ids, target_item]).flatten()
+        
+        # sorts the contributions to find the highest ones
+        top_indices = np.argsort(contributions)[-top_n:][::-1]
+        
+        # maps the indices back to the actual item IDs and their weights
+        top_predictor_items = [int(interacted_item_ids[idx]) for idx in top_indices]
+        top_predictor_weights = [float(contributions[idx]) for idx in top_indices]
+        
+        return top_predictor_items, top_predictor_weights

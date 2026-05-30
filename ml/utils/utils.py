@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def get_user_movies(session: Session, user_id: int) -> List[int]:
     """
-    Fetches user ratings from DB and returns contiguous internal movie ids
+    Fetches user ratings from DB (ignored, and unignored seperately) and returns contiguous internal movie ids
     """
     statement = (
         select(Movie.id)
@@ -18,7 +18,15 @@ def get_user_movies(session: Session, user_id: int) -> List[int]:
     )
     user_ratings = session.exec(statement).all()
 
-    return user_ratings
+    statement = (
+        select(Movie.id)
+        .join(UserRating, Movie.id == UserRating.movie_id)
+        .where(UserRating.user_id == user_id)
+        .where(UserRating.ignore == False)
+    )
+    user_ratings_without_ignored = session.exec(statement).all()
+
+    return user_ratings, user_ratings_without_ignored
 
 def get_movies_from_internal_ids(session: Session, ids: List[str]) -> List[Movie]:
     """

@@ -73,3 +73,4 @@ class UserRating(SQLModel, table=True):
     movie_id: int = Field(index=True, foreign_key="movie.id") # internal id for ML models
     rating: int 
     user_id: int = Field(foreign_key="user.id") # user table id column
+    ignore: bool = Field(default=False)

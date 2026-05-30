@@ -23,14 +23,19 @@ def test_predict_new_user_success(dummy_matrix):
     model = EASE(reg_weight=1.0)
     model.fit(dummy_matrix)
 
-    # simulates user who has watched item 0
-    interacted = [0]
+    # user interacted with 0 and 2, but ignored 2.
+    interacted = [0, 2]
+    not_ignored = [0]
     
-    recs = model.predict_new_user(interacted, k=2, mask_interacted=True)
+    recs = model.predict_new_user(interacted, not_ignored, k=2, mask_interacted=True)
 
     assert len(recs) == 2
-    # item 0 should be completely masked and not recommended
+    # items 0 and 2 should be masked from recommendations
     assert 0 not in recs
+    assert 2 not in recs
+    
+    # item 1 should be the top recommendation due to co-occurrence with 0
+    assert recs[0] == 1
 
 def test_predict_not_fitted():
     """
@@ -39,7 +44,7 @@ def test_predict_not_fitted():
     model = EASE()
     
     with pytest.raises(ValueError) as exc_info:
-        model.predict_new_user([0], k=2)
+        model.predict_new_user([0], [0], k=2)
         
     assert "not fitted" in str(exc_info.value).lower()
 
@@ -75,3 +80,39 @@ def test_load_model(mock_load):
     mock_load.assert_called_once_with("fake_path.npz")
     assert model.num_items == 2
     assert model.B.shape == (2, 2)
+
+def test_explain_recommendation_success(dummy_matrix):
+    """
+    Tests correct extraction and sorting of predictor items
+    """
+    model = EASE(reg_weight=1.0)
+    model.fit(dummy_matrix)
+    
+    items, weights = model.explain_recommendation(
+        interacted_item_ids=[0, 2],
+        target_item=[1],
+        top_n=2
+    )
+    
+    assert len(items) == 2
+    # item 0 should be the strongest predictor for item 1
+    assert items[0] == 0
+    assert weights[0] > weights[1]
+
+def test_explain_recommendation_bounds(dummy_matrix):
+    """
+    Tests explain bounds when top_n > len(interacted items)
+    """
+    model = EASE(reg_weight=1.0)
+    model.fit(dummy_matrix)
+    
+    # user watched only 1 item, asking for top 5 predictors
+    items, weights = model.explain_recommendation(
+        interacted_item_ids=[0],
+        target_item=[1],
+        top_n=5
+    )
+    
+    # should safely return the 1 available item without index errors
+    assert len(items) == 1
+    assert items == [0]

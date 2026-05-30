@@ -103,3 +103,59 @@ def test_delete_rating_not_found(auth_client):
     
     assert response.status_code == 404
     assert response.json() == {"detail": "Rating not found"}
+
+def test_ignore_movie_recommendation_success(auth_client, session, mock_user):
+    """
+    Tests successfully setting the ignore flag to True for an existing movie interaction
+    """
+
+    rating = UserRating(user_id=mock_user.id, movie_id=10, rating=4.0, ignore=False)
+    session.add(rating)
+    session.commit()
+
+    payload = {"ignore": True}
+    
+    response = auth_client.patch("/ratings/10/ignore", json=payload)
+    
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    
+    statement = select(UserRating).where(UserRating.movie_id == 10)
+    db_rating = session.exec(statement).first()
+    
+    assert db_rating.ignore is True
+
+def test_unignore_movie_recommendation_success(auth_client, session, mock_user):
+    """
+    Tests successfully setting the ignore flag back to False (unignoring)
+    """
+
+    rating = UserRating(user_id=mock_user.id, movie_id=10, rating=3.5, ignore=True)
+    session.add(rating)
+    session.commit()
+
+    payload = {"ignore": False}
+    
+    response = auth_client.patch("/ratings/10/ignore", json=payload)
+    
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    
+    statement = select(UserRating).where(UserRating.movie_id == 10)
+    db_rating = session.exec(statement).first()
+    
+    assert db_rating.ignore is False
+
+def test_ignore_movie_not_found(auth_client):
+    """
+    Tests that a 404 is raised if the user tries to ignore a movie they haven't interacted with
+    """
+    
+    payload = {"ignore": True}
+    
+    response = auth_client.patch("/ratings/999/ignore", json=payload)
+    
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "No watch history found for this movie. Cannot ignore."
+    }

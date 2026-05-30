@@ -1,4 +1,5 @@
 import pytest
+from sqlmodel import select
 from models import Movie, User, UserRating
 from ml.utils.utils import get_user_movies, get_movies_from_internal_ids
 
@@ -7,19 +8,43 @@ def test_get_user_movies_success(session, seed_data):
     Tests if correct movie ids are fetched for a specific user
     """
     # user 1 should only have rated movie ids 10 and 20
-    result = get_user_movies(session, user_id=1)
+    result, result_without_ignored = get_user_movies(session, user_id=1)
     
     assert len(result) == 2
+    assert len(result_without_ignored) == 2
     assert 10 in result
     assert 20 in result
     assert 30 not in result # user 2's rating should be excluded
+
+def test_get_user_movies_with_ignored(session, seed_data):
+    """
+    Tests if ignored movies are filtered correctly from the second list
+    """
+    # manually sets movie 10 as ignored for user 1
+    statement = select(UserRating).where(UserRating.user_id == 1, UserRating.movie_id == 10)
+    rating = session.exec(statement).first()
+    rating.ignore = True
+    session.add(rating)
+    session.commit()
+
+    result, result_without_ignored = get_user_movies(session, user_id=1)
+    
+    # full history still has both
+    assert len(result) == 2 
+    assert 10 in result
+    
+    # unignored history should drop movie 10
+    assert len(result_without_ignored) == 1 
+    assert 10 not in result_without_ignored
+    assert 20 in result_without_ignored
 
 def test_get_user_movies_empty(session):
     """
     Tests behavior for a user with no ratings
     """
-    result = get_user_movies(session, user_id=999)
+    result, result_without_ignored = get_user_movies(session, user_id=999)
     assert result == []
+    assert result_without_ignored == []
 
 def test_get_movies_from_internal_ids_order(session, seed_data):
     """
