@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 from models import Movie, User, UserRating
 from auth import get_current_user
 import scipy.sparse as sp
+from ml.models_code.EASE import EASE
 
 
 ##### auth.py, users.py fixtures
@@ -121,3 +122,23 @@ def seed_data_fixture(session):
     
     session.add_all([r1, r2, r3])
     session.commit()
+
+@pytest.fixture
+def ease_model_with_mocked_b():
+    """
+    Returns an unfitted EASE model with a manually injected B matrix
+    specifically designed for testing recommendation ordering and negative feedback
+    
+    Item 0 is mildly similar to 1 and 2
+    Item 3 is highly similar to 1, but completely unrelated to 2
+    """
+    model = EASE()
+    model.num_items = 4
+    model.B = np.array([
+        [0.0, 0.5, 0.4, 0.0],
+        [0.5, 0.0, 0.0, 0.9],
+        [0.4, 0.0, 0.0, 0.0],
+        [0.0, 0.9, 0.0, 0.0]
+    ], dtype=np.float32)
+    
+    return model

@@ -27,7 +27,13 @@ def test_predict_new_user_success(dummy_matrix):
     interacted = [0, 2]
     not_ignored = [0]
     
-    recs = model.predict_new_user(interacted, not_ignored, k=2, mask_interacted=True)
+    recs = model.predict_new_user(
+        interacted, 
+        not_ignored, 
+        negative_feedback_item_ids=[], 
+        k=2, 
+        mask_interacted=True
+    )
 
     assert len(recs) == 2
     # items 0 and 2 should be masked from recommendations
@@ -44,9 +50,51 @@ def test_predict_not_fitted():
     model = EASE()
     
     with pytest.raises(ValueError) as exc_info:
-        model.predict_new_user([0], [0], k=2)
+        model.predict_new_user([0], [0], [], k=2)
         
     assert "not fitted" in str(exc_info.value).lower()
+
+def test_predict_new_user_negative_feedback(ease_model_with_mocked_b):
+    """
+    Tests if applying negative feedback successfully penalizes similar items 
+    """
+    model = ease_model_with_mocked_b
+
+    interacted = [0]
+    not_ignored = [0]   
+    negative = [3]      
+    
+    # if no negative feedback, scores would be: 
+    # item 1: 0.5 | item 2: 0.4 -> recommendation order: [1, 2]
+    
+    recs = model.predict_new_user(
+        interacted_item_ids=interacted,
+        interacted_item_ids_without_ignored=not_ignored,
+        negative_feedback_item_ids=[],
+        negative_weight=-1.0,
+        k=2,
+        mask_interacted=True
+    )
+
+    assert len(recs) == 2
+    assert recs[0] == 1
+    assert recs[1] == 2
+
+    recs = model.predict_new_user(
+        interacted_item_ids=interacted,
+        interacted_item_ids_without_ignored=not_ignored,
+        negative_feedback_item_ids=negative,
+        negative_weight=-1.0,
+        k=2,
+        mask_interacted=True
+    )
+    
+    # with negative feedback on item 3 (weight -1.0):
+    # the new recommendation order should flip to: [2, 1]
+    
+    assert len(recs) == 2
+    assert recs[0] == 2 
+    assert recs[1] == 1 
 
 @patch("numpy.savez_compressed")
 def test_save_model(mock_savez, dummy_matrix):

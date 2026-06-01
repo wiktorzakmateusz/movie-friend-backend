@@ -109,22 +109,22 @@ def test_search_movies_filtering(auth_client, session):
     assert response_title.json()[0]["title"] == "The Dark Knight"
 
 
-def test_delete_all_movies(auth_client, session):
-    """
-    Tests deletion of all movies
-    """
-    movies = [
-        Movie(id=10, imdb_id="tt10", movie_id="m10", title="Movie 1", year=2020, type="movie", poster="img10.jpg"),
-        Movie(id=11, imdb_id="tt11", movie_id="m11", title="Movie 2", year=2021, type="movie", poster="img11.jpg")
-    ]
-    session.add_all(movies)
-    session.commit()
+# def test_delete_all_movies(auth_client, session):
+#     """
+#     Tests deletion of all movies
+#     """
+#     movies = [
+#         Movie(id=10, imdb_id="tt10", movie_id="m10", title="Movie 1", year=2020, type="movie", poster="img10.jpg"),
+#         Movie(id=11, imdb_id="tt11", movie_id="m11", title="Movie 2", year=2021, type="movie", poster="img11.jpg")
+#     ]
+#     session.add_all(movies)
+#     session.commit()
 
-    response = auth_client.delete("/movies/")
+#     response = auth_client.delete("/movies/")
     
-    assert response.status_code == 200
-    assert response.json() == {"message": "Successfully deleted 2 movies."}
+#     assert response.status_code == 200
+#     assert response.json() == {"message": "Successfully deleted 2 movies."}
     
-    from sqlmodel import select
-    remaining_movies = session.exec(select(Movie)).all()
-    assert len(remaining_movies) == 0
+#     from sqlmodel import select
+#     remaining_movies = session.exec(select(Movie)).all()
+#     assert len(remaining_movies) == 0

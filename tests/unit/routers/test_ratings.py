@@ -6,32 +6,37 @@ from auth import get_current_user
 
 def test_get_user_ratings(auth_client, session, mock_user):
     """
-    Tests retrieving user ratings with movie details
+    Tests retrieving user ratings with movie details, including the ignore flag
     """
-    # insert required movie fields
-    movie = Movie(
-        id=10, 
-        imdb_id="tt0133093", 
-        movie_id="2571", 
-        title="The Matrix", 
-        year=1999, 
-        type="movie", 
-        poster="https://example.com/matrix.jpg"
+    # inserts two movies
+    movie1 = Movie(
+        id=10, imdb_id="tt0133093", movie_id="2571", 
+        title="The Matrix", year=1999, type="movie", poster="matrix.jpg"
     )
-    # mock user has id 1
-    rating = UserRating(user_id=mock_user.id, movie_id=10, rating=9)
+    movie2 = Movie(
+        id=11, imdb_id="tt1375666", movie_id="27205", 
+        title="Inception", year=2010, type="movie", poster="inception.jpg"
+    )
     
-    session.add(movie)
-    session.add(rating)
+    rating1 = UserRating(user_id=mock_user.id, movie_id=10, rating=9, ignore=False)
+    rating2 = UserRating(user_id=mock_user.id, movie_id=11, rating=-1, ignore=True)
+    
+    session.add_all([movie1, movie2, rating1, rating2])
     session.commit()
 
     response = auth_client.get("/ratings/")
     
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["title"] == "The Matrix"
-    assert data[0]["user_rating"] == 9
+    assert len(data) == 2
+    
+    assert data[0]["title"] == "Inception"
+    assert data[0]["user_rating"] == -1
+    assert data[0]["ignore"] is True  # Verifying the ignore flag is passed!
+
+    assert data[1]["title"] == "The Matrix"
+    assert data[1]["user_rating"] == 9
+    assert data[1]["ignore"] is False
 
 def test_rate_movie_new(auth_client, session):
     """
@@ -94,6 +99,25 @@ def test_delete_rating_success(auth_client, session, mock_user):
     remaining = session.exec(select(UserRating)).all()
     # verify db is completely empty
     assert len(remaining) == 0
+
+def test_rate_movie_negative_feedback(auth_client, session):
+    """
+    Tests submitting a negative rating (-1) for hiding/blocking mechanics
+    """
+    payload = {
+        "movie_id": 10,
+        "rating": -1.0
+    }
+    
+    response = auth_client.post("/ratings/", json=payload)
+    
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    
+    db_rating = session.exec(select(UserRating).where(UserRating.movie_id == 10)).first()
+    assert db_rating is not None
+    assert db_rating.rating == -1.0
+    assert db_rating.ignore is False
 
 def test_delete_rating_not_found(auth_client):
     """

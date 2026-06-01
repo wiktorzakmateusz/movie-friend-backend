@@ -11,7 +11,7 @@ def test_get_recommendations_empty_history(mock_get_movies, auth_client):
     Tests returning empty list when user has no ratings
     """
     # simulates user having no watched movies
-    mock_get_movies.return_value = ([], [])
+    mock_get_movies.return_value = ([], [], [])
     
     response = auth_client.get("/recommendations/")
     
@@ -27,7 +27,8 @@ def test_get_recommendations_success(mock_get_movie_objects, mock_ease_predict, 
     """
     # simulates user watch history
     mock_history = [{"movie_id": 10, "rating": 5.0}, {"movie_id": 11, "rating": 4.0}]
-    mock_get_user_movies.return_value = (mock_history, mock_history)
+    mock_negative = [{"movie_id": 12, "rating": -1.0}]
+    mock_get_user_movies.return_value = (mock_history, mock_history, mock_negative)
     
     # simulates ease returning an array of internal ids
     mock_ease_predict.return_value = np.array([101, 102])
@@ -46,7 +47,9 @@ def test_get_recommendations_success(mock_get_movie_objects, mock_ease_predict, 
     assert data[0]["title"] == "Rec Movie 1"
     
     # verifies ease was called with the k=20 parameter from router
-    mock_ease_predict.assert_called_once_with(mock_history, mock_history, k=20)
+    mock_ease_predict.assert_called_once_with(
+        mock_history, mock_history, mock_negative, negative_weight=0.5, k=20
+    )
 
 @patch("routers.recommendations.svd")
 def test_get_ratings_standard(mock_svd, auth_client):
@@ -105,7 +108,7 @@ def test_get_similar_movies_success(mock_get_movie_objects, mock_ease_predict, a
     assert data[0]["title"] == "Similar Movie 1"
     
     # verifies ease was called with the single item list and k=5
-    mock_ease_predict.assert_called_once_with([target_movie_id], [target_movie_id], k=5)
+    mock_ease_predict.assert_called_once_with([target_movie_id], [target_movie_id], [], k=5)
     
     # verifies the db fetch was called with the resulting list from ease
     mock_get_movie_objects.assert_called_once()
@@ -119,7 +122,7 @@ def test_explain_recommendation_empty_history(mock_get_movies, auth_client):
     Tests returning an empty list when the user has no usable watch history
     (or all ignored)
     """
-    mock_get_movies.return_value = ([], [])
+    mock_get_movies.return_value = ([], [], [])
     
     response = auth_client.get("/recommendations/99/explain")
     
@@ -140,7 +143,7 @@ def test_explain_recommendation_success(
     """
     # simulates a user watch history tuple: (full_history, unignored_history)
     mock_history = [{"movie_id": 10, "rating": 5.0}, {"movie_id": 11, "rating": 4.0}]
-    mock_get_user_movies.return_value = (mock_history, mock_history)
+    mock_get_user_movies.return_value = (mock_history, mock_history, [])
     
     # simulates ease returning internal ids and their raw calculation weights
     mock_ease_explain.return_value = ([101, 102], [0.85472, 0.42119])

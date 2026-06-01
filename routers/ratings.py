@@ -46,7 +46,7 @@ def rate_movie(
     """
 
     # securely forces the rating to belong to the authenticated user
-    rating_data.user_id = current_user.id 
+    rating_data.user_id = current_user.id
 
     # checks if the user has already rated this specific movie
     statement = select(UserRating).where(

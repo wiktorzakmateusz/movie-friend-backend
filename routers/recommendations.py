@@ -37,14 +37,15 @@ def get_recommendations(
     """
 
     # returns a list of movies watched
-    user_history, user_history_without_ignored = get_user_movies(session, current_user.id)
+    user_history, user_history_without_ignored, negative_feedback = get_user_movies(session, current_user.id)
 
     # if none, returns empty list
     if not user_history_without_ignored:
-        return [] 
+        return []
     
     # getting recommended movies - a ndarray of movies internal ids
-    recommended_movies_ids = ease.predict_new_user(user_history, user_history_without_ignored, k=20)
+    recommended_movies_ids = ease.predict_new_user(user_history, user_history_without_ignored, 
+                                                   negative_feedback, negative_weight=0.5, k=20)
 
     # returns list of movie objects
     recommended_movies = get_movies_from_internal_ids(session, recommended_movies_ids.tolist())
@@ -87,7 +88,7 @@ def get_similar_movies(
     # with history of that specific movie
 
     # getting similar movies - a ndarray of movies internal ids
-    similar_movies_ids = ease.predict_new_user([current_item], [current_item], k=5)
+    similar_movies_ids = ease.predict_new_user([current_item], [current_item], [], k=5)
 
     # returns list of movie objects
     similar_movies = get_movies_from_internal_ids(session, similar_movies_ids.tolist())
@@ -105,12 +106,12 @@ def explain_recommendation(
     """
     
     # returns a list of movies watched
-    user_history, user_history_without_ignored = get_user_movies(session, current_user.id)
+    user_history, user_history_without_ignored, negative_feedback = get_user_movies(session, current_user.id)
 
     # if none, returns empty list
     if not user_history_without_ignored:
         return []
-    
+
     # getting predictors and their weights - a list of movies internal ids and a list of weights
     predictors_ids, weights = ease.explain_recommendation(user_history_without_ignored, current_item, top_n=3)
 

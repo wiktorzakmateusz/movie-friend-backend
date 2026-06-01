@@ -8,10 +8,11 @@ def test_get_user_movies_success(session, seed_data):
     Tests if correct movie ids are fetched for a specific user
     """
     # user 1 should only have rated movie ids 10 and 20
-    result, result_without_ignored = get_user_movies(session, user_id=1)
+    result, result_without_ignored, result_negative = get_user_movies(session, user_id=1)
     
     assert len(result) == 2
     assert len(result_without_ignored) == 2
+    assert len(result_negative) == 0
     assert 10 in result
     assert 20 in result
     assert 30 not in result # user 2's rating should be excluded
@@ -27,7 +28,7 @@ def test_get_user_movies_with_ignored(session, seed_data):
     session.add(rating)
     session.commit()
 
-    result, result_without_ignored = get_user_movies(session, user_id=1)
+    result, result_without_ignored, result_negative = get_user_movies(session, user_id=1)
     
     # full history still has both
     assert len(result) == 2 
@@ -38,13 +39,63 @@ def test_get_user_movies_with_ignored(session, seed_data):
     assert 10 not in result_without_ignored
     assert 20 in result_without_ignored
 
+    # negative feedback should be empty
+    assert len(result_negative) == 0
+
+def test_get_user_movies_negative_feedback(session, seed_data):
+    """
+    Tests if blocked movies (rating -1, ignore false) are mapped to negative feedback
+    """
+    # manually sets movie 10 as blocked for user 1
+    statement = select(UserRating).where(UserRating.user_id == 1, UserRating.movie_id == 10)
+    rating = session.exec(statement).first()
+    rating.rating = -1
+    rating.ignore = False
+    session.add(rating)
+    session.commit()
+
+    result, result_without_ignored, result_negative = get_user_movies(session, user_id=1)
+
+    # full history still has both
+    assert len(result) == 2
+    
+    # positive list should drop movie 10
+    assert 10 not in result_without_ignored
+    assert 20 in result_without_ignored
+    
+    # negative list should only have movie 10
+    assert len(result_negative) == 1
+    assert 10 in result_negative
+
+def test_get_user_movies_hidden(session, seed_data):
+    """
+    Tests if hidden movies (rating -1, ignore true) are excluded from both training lists
+    """
+    # manually sets movie 10 as hidden for user 1
+    statement = select(UserRating).where(UserRating.user_id == 1, UserRating.movie_id == 10)
+    rating = session.exec(statement).first()
+    rating.rating = -1
+    rating.ignore = True
+    session.add(rating)
+    session.commit()
+
+    result, result_without_ignored, result_negative = get_user_movies(session, user_id=1)
+
+    # full history still has both (for masking)
+    assert len(result) == 2
+    
+    # neither training list should contain movie 10
+    assert 10 not in result_without_ignored
+    assert 10 not in result_negative
+
 def test_get_user_movies_empty(session):
     """
     Tests behavior for a user with no ratings
     """
-    result, result_without_ignored = get_user_movies(session, user_id=999)
+    result, result_without_ignored, result_negative = get_user_movies(session, user_id=999)
     assert result == []
     assert result_without_ignored == []
+    assert result_negative == []
 
 def test_get_movies_from_internal_ids_order(session, seed_data):
     """
