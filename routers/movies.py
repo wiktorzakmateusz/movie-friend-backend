@@ -109,20 +109,20 @@ def get_movie(
     
     return movie_dict
 
-@router.delete("/")
-def delete_all_movies(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user) # TODO: admin only
-):
-    """
-    WARNING: Deletes all movies in the database
-    """
+# @router.delete("/")
+# def delete_all_movies(
+#     session: Session = Depends(get_session),
+#     current_user: User = Depends(get_current_user) # TODO: admin only
+# ):
+#     """
+#     WARNING: Deletes all movies in the database
+#     """
 
-    statement = delete(Movie)
-    result = session.exec(statement)
-    session.commit()
+#     statement = delete(Movie)
+#     result = session.exec(statement)
+#     session.commit()
     
-    return {"message": f"Successfully deleted {result.rowcount} movies."}
+#     return {"message": f"Successfully deleted {result.rowcount} movies."}
 
 
 # TO DELETE

@@ -51,15 +51,20 @@ class EASE:
         self.B = np.load(path)['B']
         self.num_items = self.B.shape[1]
 
-    def predict_new_user(self, interacted_item_ids, interacted_item_ids_without_ignored, k=20, mask_interacted=True):
+    def predict_new_user(self, interacted_item_ids, interacted_item_ids_without_ignored, 
+                         negative_feedback_item_ids, negative_weight=0.5, k=20, mask_interacted=True):
         """
         Predicts scores for a single new user and returns the Top-K recommendations
         
         Args:
-            interacted_item_ids: list or 1D array of integer item indices (to use for 
-            prediction)
-            interacted_item_ids_without_ignored: list or 1D array of integer item 
-            indices (to mask from recommendations)
+            interacted_item_ids: list or 1D array of integer item indices (to mask from 
+            recommendations)
+            interacted_item_ids_without_ignored: list or 1D array of integer item indices 
+            (to use for prediction)
+            negative_feedback_item_ids: list or 1D array of integer item indices (to include 
+            negative feedback)
+            negative_weight: float, a negative weight applied to the user vector
+            for unwanted items
             k: int, the number of top recommendations to return
             mask_interacted: bool, if True, skips already interacted items
             
@@ -74,14 +79,17 @@ class EASE:
         # user vector
         user_vector = np.zeros(self.num_items, dtype=np.float32)
         user_vector[interacted_item_ids_without_ignored] = 1.0
+        if len(negative_feedback_item_ids) > 0: # negative feedback
+            user_vector[negative_feedback_item_ids] = negative_weight
         
         # scores calculation
         scores = user_vector @ self.B
         scores = np.asarray(scores).flatten()
         
-        # ignoring interacted items
+        # ignoring interacted items (and unwanted)
         if mask_interacted:
-            scores[interacted_item_ids] = -np.inf
+            mask_indices = np.concatenate([interacted_item_ids, negative_feedback_item_ids]).astype(int)
+            scores[mask_indices] = -np.inf
         
         # top-k unsorted indices
         unsorted_top_k_idx = np.argpartition(-scores, k - 1)[:k] # partial sort
