@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, Depends, Request
 from sqlmodel import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from database import get_session          
 from auth import get_current_user     
@@ -29,11 +29,12 @@ ease.load_model('ml/models/B_ease.npz')
 
 @router.get("/")
 def get_recommendations(
+    genre: Optional[str] = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Generates personalized movie recommendations for the current user.
+    Generates personalized movie recommendations for the current user
     """
 
     # returns a list of movies watched
@@ -43,14 +44,37 @@ def get_recommendations(
     if not user_history_without_ignored:
         return []
     
+    # larger k if the genre is specified
+    k = 100 if genre else 20
+
     # getting recommended movies - a ndarray of movies internal ids
     recommended_movies_ids = ease.predict_new_user(user_history, user_history_without_ignored, 
-                                                   negative_feedback, negative_weight=0.5, k=20)
+                                                   negative_feedback, negative_weight=0.5, k=k)
 
     # returns list of movie objects
     recommended_movies = get_movies_from_internal_ids(session, recommended_movies_ids.tolist())
 
-    return [movie.model_dump() for movie in recommended_movies] # converting to standard py dict
+    # creates the dict so order is preserved
+    movie_dict = {movie.id: movie for movie in recommended_movies}
+
+    final_recommendations = []
+    
+    for movie_id in recommended_movies_ids.tolist():
+        movie = movie_dict.get(movie_id)
+        if not movie:
+            continue
+        
+        # only apply the genre filter if a genre was requested
+        if genre:
+            if not movie.genre or genre.lower() not in movie.genre.lower():
+                continue
+        
+        final_recommendations.append(movie.model_dump())
+        
+        if len(final_recommendations) >= 20:
+            break
+
+    return final_recommendations
 
 @router.get("/{current_item}/rating")
 def get_ratings(
