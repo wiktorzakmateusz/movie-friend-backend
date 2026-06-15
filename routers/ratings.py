@@ -102,7 +102,7 @@ def ignore_movie_recommendation(
     """
     Updates the ignore flag for a specific movie, 
     preventing it from influencing future recommendations
-    or unpreventing.
+    or unpreventing
     """
 
     # locates the existing interaction in the database

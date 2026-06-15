@@ -1,6 +1,6 @@
 # router for handling movies
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select, delete
+from sqlmodel import Session, select, delete, desc
 from database import get_session
 from models import Movie, MovieCreate, UserRating, User
 from typing import List, Optional
@@ -33,6 +33,7 @@ def search_movies(
     title: Optional[str] = None,
     genre: Optional[str] = None,
     keyword: Optional[str] = None,
+    sort_by: Optional[str] = "popular",
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -58,7 +59,9 @@ def search_movies(
         statement = statement.where(Movie.title.ilike(f"%{title}%"))
     if genre:
         statement = statement.where(Movie.genre.ilike(f"%{genre}%"))
-        
+    
+    statement = statement.order_by(desc(Movie.imdb_rating))
+
     results = session.exec(statement).all()
 
     # merges the separated movie model and rating scalar into a single dictionary
@@ -93,6 +96,7 @@ def get_movie(
                 (UserRating.user_id == current_user.id)
             )
         )
+        .order_by(desc(Movie.imdb_votes))
     )
     
     result = session.exec(statement).first()

@@ -71,9 +71,9 @@ def test_predict_new_user_negative_feedback(ease_model_with_mocked_b):
         interacted_item_ids=interacted,
         interacted_item_ids_without_ignored=not_ignored,
         negative_feedback_item_ids=[],
-        negative_weight=-1.0,
+        negative_weight=1.0,
         k=2,
-        mask_interacted=True
+        mask_interacted=False
     )
 
     assert len(recs) == 2
@@ -84,7 +84,7 @@ def test_predict_new_user_negative_feedback(ease_model_with_mocked_b):
         interacted_item_ids=interacted,
         interacted_item_ids_without_ignored=not_ignored,
         negative_feedback_item_ids=negative,
-        negative_weight=-1.0,
+        negative_weight=1.0,
         k=2,
         mask_interacted=True
     )

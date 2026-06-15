@@ -35,8 +35,8 @@ def test_get_recommendations_success(mock_get_movie_objects, mock_ease_predict, 
     
     # simulates fetching movie objects from the db
     mock_get_movie_objects.return_value = [
-        Movie(id=1, imdb_id="tt1", movie_id="101", title="Rec Movie 1", year=2020, type="movie", poster="img1.jpg"),
-        Movie(id=2, imdb_id="tt2", movie_id="102", title="Rec Movie 2", year=2021, type="movie", poster="img2.jpg")
+        Movie(id=101, imdb_id="tt1", movie_id="101", title="Rec Movie 1", year=2020, type="movie", poster="img1.jpg"),
+        Movie(id=102, imdb_id="tt2", movie_id="102", title="Rec Movie 2", year=2021, type="movie", poster="img2.jpg")
     ]
     
     response = auth_client.get("/recommendations/")

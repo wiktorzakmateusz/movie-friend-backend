@@ -80,7 +80,7 @@ class EASE:
         user_vector = np.zeros(self.num_items, dtype=np.float32)
         user_vector[interacted_item_ids_without_ignored] = 1.0
         if len(negative_feedback_item_ids) > 0: # negative feedback
-            user_vector[negative_feedback_item_ids] = negative_weight
+            user_vector[negative_feedback_item_ids] = -negative_weight
         
         # scores calculation
         scores = user_vector @ self.B
